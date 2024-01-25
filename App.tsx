@@ -7,7 +7,7 @@ import {
 import { Players } from '@screens/Players'
 import theme from '@theme/index'
 import { StatusBar } from 'react-native'
-import { ThemeProvider } from 'styled-components'
+import { ThemeProvider } from 'styled-components/native'
 
 export default function App() {
   const [fontsLoaded] = useFonts({ Roboto_400Regular, Roboto_700Bold })
