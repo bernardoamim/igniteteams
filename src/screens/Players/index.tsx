@@ -7,8 +7,12 @@ import { Input } from '@components/Input'
 import { ListEmpty } from '@components/ListEmpty'
 import { PlayerCard } from '@components/PlayerCard'
 import { useRoute } from '@react-navigation/native'
+import { getPlayersByGroup } from '@storage/player/GetPlayersByGroup'
+import { PlayerStorageDTO } from '@storage/player/PlayerStorageDTO'
+import { addPlayerByGroup } from '@storage/player/addPlayerByGroup'
+import { AppError } from '@utils/AppError'
 import { useState } from 'react'
-import { FlatList } from 'react-native'
+import { Alert, FlatList } from 'react-native'
 import { AmountOfPlayers, Container, Form, ListHeader } from './styles'
 
 type PlayersRouteParams = {
@@ -19,8 +23,35 @@ export function Players() {
   const route = useRoute()
   const { group } = route.params as PlayersRouteParams
 
+  const [newPlayerName, setNewPlayerName] = useState('')
   const [team, setTeam] = useState('Time A')
   const [players, setPlayers] = useState<string[]>(['Bernardo'])
+
+  async function handleAddPlayer() {
+    if (!newPlayerName.trim().length) {
+      return Alert.alert(
+        'Nova Pessoa',
+        'Informe o nome da pessoa para adicionar.',
+      )
+    }
+
+    const newPlayer: PlayerStorageDTO = {
+      name: newPlayerName,
+      team,
+    }
+
+    try {
+      await addPlayerByGroup(newPlayer, group)
+      const players = await getPlayersByGroup(group)
+    } catch (error) {
+      if (error instanceof AppError) {
+        Alert.alert('Nova Pessoa', error.message)
+      } else {
+        console.log(error)
+        Alert.alert('Nova Pessoa', 'Não foi possível adicionar.')
+      }
+    }
+  }
 
   function handleDeletePlayer() {}
 
@@ -30,8 +61,12 @@ export function Players() {
       <Highlight title={group} subtitle="adicione a galera e separe os times" />
 
       <Form>
-        <Input placeholder="Nome do participante" autoCorrect={false} />
-        <ButtonIcon icon="add" />
+        <Input
+          placeholder="Nome do participante"
+          autoCorrect={false}
+          onChangeText={setNewPlayerName}
+        />
+        <ButtonIcon icon="add" onPress={handleAddPlayer} />
       </Form>
 
       <ListHeader>
