@@ -3,7 +3,10 @@ import { Header } from '@components/Header'
 import { Highlight } from '@components/Highlight'
 import { Input } from '@components/Input'
 import { useNavigation } from '@react-navigation/native'
+import { createGroup } from '@storage/group/CreateGroup'
+import { AppError } from '@utils/AppError'
 import { useState } from 'react'
+import { Alert } from 'react-native'
 import { Container, Content, Icon } from './styles'
 
 export function NewGroup() {
@@ -11,10 +14,22 @@ export function NewGroup() {
 
   const navigation = useNavigation()
 
-  function handleNew() {
-    if (!group.length) return
+  async function handleNew() {
+    try {
+      if (!group.trim().length) {
+        return Alert.alert('Nova Turma', 'Informe o nome da turma.')
+      }
 
-    navigation.navigate('players', { group })
+      await createGroup(group)
+      navigation.navigate('players', { group })
+    } catch (error) {
+      if (error instanceof AppError) {
+        Alert.alert('Nova Turma', error.message)
+      }
+
+      Alert.alert('Nova Turma', 'Não foi possível criar a turma.')
+      console.log(error)
+    }
   }
 
   return (
