@@ -7,12 +7,14 @@ import { Input } from '@components/Input'
 import { ListEmpty } from '@components/ListEmpty'
 import { PlayerCard } from '@components/PlayerCard'
 import { useRoute } from '@react-navigation/native'
+import { addPlayerByGroup } from '@storage/player/AddPlayerByGroup'
+import { getPlayersByGroupAndTeam } from '@storage/player/GetPlayerByGroupAndTeam'
 import { getPlayersByGroup } from '@storage/player/GetPlayersByGroup'
 import { PlayerStorageDTO } from '@storage/player/PlayerStorageDTO'
-import { addPlayerByGroup } from '@storage/player/addPlayerByGroup'
+import { removePlayerByGroup } from '@storage/player/RemovePlayerByGroupd'
 import { AppError } from '@utils/AppError'
-import { useState } from 'react'
-import { Alert, FlatList } from 'react-native'
+import { useEffect, useRef, useState } from 'react'
+import { Alert, FlatList, Keyboard, TextInput } from 'react-native'
 import { AmountOfPlayers, Container, Form, ListHeader } from './styles'
 
 type PlayersRouteParams = {
@@ -23,9 +25,11 @@ export function Players() {
   const route = useRoute()
   const { group } = route.params as PlayersRouteParams
 
+  const inputRef = useRef<TextInput>(null)
+
   const [newPlayerName, setNewPlayerName] = useState('')
   const [team, setTeam] = useState('Time A')
-  const [players, setPlayers] = useState<string[]>(['Bernardo'])
+  const [players, setPlayers] = useState<PlayerStorageDTO[]>([])
 
   async function handleAddPlayer() {
     if (!newPlayerName.trim().length) {
@@ -42,7 +46,12 @@ export function Players() {
 
     try {
       await addPlayerByGroup(newPlayer, group)
-      const players = await getPlayersByGroup(group)
+
+      inputRef.current?.blur()
+      Keyboard.dismiss()
+
+      setNewPlayerName('')
+      fetchPlayersByTeam()
     } catch (error) {
       if (error instanceof AppError) {
         Alert.alert('Nova Pessoa', error.message)
@@ -53,7 +62,34 @@ export function Players() {
     }
   }
 
-  function handleDeletePlayer() {}
+  async function fetchPlayersByTeam() {
+    try {
+      const playersByTeam = await getPlayersByGroupAndTeam(group, team)
+      setPlayers(playersByTeam)
+    } catch (error) {
+      console.log(error)
+      Alert.alert(
+        'Pessoas',
+        'Não foi possível carregar as pessoas do time selecionado.',
+      )
+    }
+  }
+
+  async function handleDeletePlayer(playerName: string) {
+    try {
+      await removePlayerByGroup(playerName, group)
+
+      fetchPlayersByTeam()
+    } catch (error) {
+      console.log(error)
+      Alert.alert('Remover Pessoa', 'Não foi possível remover essa pessoa.')
+    }
+  }
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
+  useEffect(() => {
+    fetchPlayersByTeam()
+  }, [team])
 
   return (
     <Container>
@@ -65,6 +101,10 @@ export function Players() {
           placeholder="Nome do participante"
           autoCorrect={false}
           onChangeText={setNewPlayerName}
+          value={newPlayerName}
+          inputRef={inputRef}
+          onSubmitEditing={handleAddPlayer}
+          returnKeyType="done"
         />
         <ButtonIcon icon="add" onPress={handleAddPlayer} />
       </Form>
@@ -87,9 +127,12 @@ export function Players() {
 
       <FlatList
         data={players}
-        keyExtractor={(item) => item}
+        keyExtractor={(item) => item.name}
         renderItem={({ item }) => (
-          <PlayerCard name={item} onRemove={handleDeletePlayer} />
+          <PlayerCard
+            name={item.name}
+            onRemove={() => handleDeletePlayer(item.name)}
+          />
         )}
         ListEmptyComponent={() => (
           <ListEmpty message="Não há pessoas nesse time." />
