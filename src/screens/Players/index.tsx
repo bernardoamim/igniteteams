@@ -6,12 +6,12 @@ import { Highlight } from '@components/Highlight'
 import { Input } from '@components/Input'
 import { ListEmpty } from '@components/ListEmpty'
 import { PlayerCard } from '@components/PlayerCard'
-import { useRoute } from '@react-navigation/native'
+import { useNavigation, useRoute } from '@react-navigation/native'
+import { deleteGroupByName } from '@storage/group/DeleteGroupByName'
 import { addPlayerByGroup } from '@storage/player/AddPlayerByGroup'
+import { removePlayerByGroup } from '@storage/player/DeletePlayerByGroup'
 import { getPlayersByGroupAndTeam } from '@storage/player/GetPlayerByGroupAndTeam'
-import { getPlayersByGroup } from '@storage/player/GetPlayersByGroup'
 import { PlayerStorageDTO } from '@storage/player/PlayerStorageDTO'
-import { removePlayerByGroup } from '@storage/player/RemovePlayerByGroupd'
 import { AppError } from '@utils/AppError'
 import { useEffect, useRef, useState } from 'react'
 import { Alert, FlatList, Keyboard, TextInput } from 'react-native'
@@ -22,14 +22,15 @@ type PlayersRouteParams = {
 }
 
 export function Players() {
-  const route = useRoute()
-  const { group } = route.params as PlayersRouteParams
-
-  const inputRef = useRef<TextInput>(null)
-
   const [newPlayerName, setNewPlayerName] = useState('')
   const [team, setTeam] = useState('Time A')
   const [players, setPlayers] = useState<PlayerStorageDTO[]>([])
+
+  const route = useRoute()
+  const navigation = useNavigation()
+  const { group } = route.params as PlayersRouteParams
+
+  const inputRef = useRef<TextInput>(null)
 
   async function handleAddPlayer() {
     if (!newPlayerName.trim().length) {
@@ -84,6 +85,23 @@ export function Players() {
       console.log(error)
       Alert.alert('Remover Pessoa', 'Não foi possível remover essa pessoa.')
     }
+  }
+
+  async function deleteGroup() {
+    try {
+      await deleteGroupByName(group)
+      navigation.navigate('groups')
+    } catch (error) {
+      console.log(error)
+      Alert.alert('Remover Grupo', 'Não foi possível remover essa turma.')
+    }
+  }
+
+  async function handleDeleteGroupPress() {
+    Alert.alert('Remover', 'Deseja remover essa turma?', [
+      { text: 'Não', style: 'cancel' },
+      { text: 'Sim', onPress: () => deleteGroup() },
+    ])
   }
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
@@ -144,7 +162,11 @@ export function Players() {
         ]}
       />
 
-      <Button title="Remover turma" type="SECONDARY" />
+      <Button
+        title="Remover turma"
+        type="SECONDARY"
+        onPress={handleDeleteGroupPress}
+      />
     </Container>
   )
 }

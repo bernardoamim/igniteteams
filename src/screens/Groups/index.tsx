@@ -17,6 +17,7 @@ export function Groups() {
   async function fetchGroups() {
     try {
       const data = await getAllGroups()
+      console.log('DATA', data)
       setGroups(data)
     } catch (error) {
       console.log(error)
